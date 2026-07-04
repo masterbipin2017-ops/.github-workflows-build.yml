@@ -56,7 +56,7 @@ jobs:
           EOF
 
       - name: Create settings.gradle
-          run: |
+        run: |
           cat > settings.gradle << 'EOF'
           pluginManagement {
               repositories {
