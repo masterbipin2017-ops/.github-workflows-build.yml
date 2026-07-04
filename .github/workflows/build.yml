@@ -28,13 +28,13 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create Project Files Automatically
+      - name: Initialize Directories
         run: |
-          # सभी ज़रूरी फोल्डर्स बनाना
           mkdir -p app/src/main/java/com/jarvis/automation
 
-          # 1. ROOT BUILD.GRADLE
-          cat << 'EOF' > build.gradle
+      - name: Create root build.gradle
+        run: |
+          cat > build.gradle << 'EOF'
           buildscript {
               repositories {
                   google()
@@ -44,21 +44,20 @@ jobs:
                   classpath 'com.android.tools.build:gradle:8.4.0'
               }
           }
-
           allprojects {
               repositories {
                   google()
                   mavenCentral()
               }
           }
-
           task clean(type: Delete) {
               delete rootProject.buildDir
           }
           EOF
 
-          # 2. SETTINGS.GRADLE
-          cat << 'EOF' > settings.gradle
+      - name: Create settings.gradle
+          run: |
+          cat > settings.gradle << 'EOF'
           pluginManagement {
               repositories {
                   google()
@@ -66,7 +65,6 @@ jobs:
                   gradlePluginPortal()
               }
           }
-
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
@@ -74,13 +72,13 @@ jobs:
                   mavenCentral()
               }
           }
-
           rootProject.name = "JarvisAutomation"
           include ':app'
           EOF
 
-          # 3. GRADLE.PROPERTIES
-          cat << 'EOF' > gradle.properties
+      - name: Create gradle.properties
+        run: |
+          cat > gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           org.gradle.parallel=true
           android.useAndroidX=true
@@ -88,16 +86,15 @@ jobs:
           android.nonTransitiveRClass=true
           EOF
 
-          # 4. APP/BUILD.GRADLE
-          cat << 'EOF' > app/build.gradle
+      - name: Create app build.gradle
+        run: |
+          cat > app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
           }
-
           android {
               namespace 'com.jarvis.automation'
               compileSdk 34
-
               defaultConfig {
                   applicationId "com.jarvis.automation"
                   minSdk 24
@@ -105,7 +102,6 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
-
               buildTypes {
                   debug {
                       minifyEnabled false
@@ -115,25 +111,23 @@ jobs:
                       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
                   }
               }
-
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
               }
-
               lint {
                   abortOnError false
                   checkReleaseBuilds false
               }
           }
-
           dependencies {
               implementation 'androidx.core:core:1.12.0'
           }
           EOF
 
-          # 5. ANDROIDMANIFEST.XML
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
+      - name: Create AndroidManifest.xml
+        run: |
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:tools="http://schemas.android.com/tools">
@@ -225,8 +219,9 @@ jobs:
           </manifest>
           EOF
 
-          # 6. VIPCONFIG.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/VipConfig.java
+      - name: Create VipConfig.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/VipConfig.java << 'EOF'
           package com.jarvis.automation;
 
           import java.util.HashMap;
@@ -267,8 +262,9 @@ jobs:
           }
           EOF
 
-          # 7. VOICECOMMANDMANAGER.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/VoiceCommandManager.java
+      - name: Create VoiceCommandManager.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/VoiceCommandManager.java << 'EOF'
           package com.jarvis.automation;
 
           import android.Manifest;
@@ -457,8 +453,9 @@ jobs:
           }
           EOF
 
-          # 8. BACKGROUNDAUTOMATIONSERVICE.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/BackgroundAutomationService.java
+      - name: Create BackgroundAutomationService.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/BackgroundAutomationService.java << 'EOF'
           package com.jarvis.automation;
 
           import android.Manifest;
@@ -639,8 +636,9 @@ jobs:
           }
           EOF
 
-          # 9. BLUETOOTHHEADSETRECEIVER.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/BluetoothHeadsetReceiver.java
+      - name: Create BluetoothHeadsetReceiver.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/BluetoothHeadsetReceiver.java << 'EOF'
           package com.jarvis.automation;
 
           import android.Manifest;
@@ -687,8 +685,9 @@ jobs:
           }
           EOF
 
-          # 10. WHATSAPPNOTIFICATIONLISTENER.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/WhatsAppNotificationListener.java
+      - name: Create WhatsAppNotificationListener.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/WhatsAppNotificationListener.java << 'EOF'
           package com.jarvis.automation;
 
           import android.app.Notification;
@@ -754,8 +753,9 @@ jobs:
           }
           EOF
 
-          # 11. MAINACTIVITY.JAVA
-          cat << 'EOF' > app/src/main/java/com/jarvis/automation/MainActivity.java
+      - name: Create MainActivity.java
+        run: |
+          cat > app/src/main/java/com/jarvis/automation/MainActivity.java << 'EOF'
           package com.jarvis.automation;
 
           import android.Manifest;
