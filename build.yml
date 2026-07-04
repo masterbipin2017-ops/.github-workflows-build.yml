@@ -1,0 +1,935 @@
+name: Build JarvisAutomation APK
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required SDK platforms
+        run: |
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Create Project Files Automatically
+        run: |
+          # सभी ज़रूरी फोल्डर्स बनाना
+          mkdir -p app/src/main/java/com/jarvis/automation
+
+          # 1. ROOT BUILD.GRADLE
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.4.0'
+              }
+          }
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          task clean(type: Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+
+          # 2. SETTINGS.GRADLE
+          cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "JarvisAutomation"
+          include ':app'
+          EOF
+
+          # 3. GRADLE.PROPERTIES
+          cat << 'EOF' > gradle.properties
+          Org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.parallel=true
+          android.useAndroidX=true
+          android.enableJetifier=false
+          android.nonTransitiveRClass=true
+          EOF
+
+          # 4. APP/BUILD.GRADLE
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.jarvis.automation'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.jarvis.automation"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  debug {
+                      minifyEnabled false
+                  }
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              lint {
+                  abortOnError false
+                  checkReleaseBuilds false
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.core:core:1.12.0'
+          }
+          EOF
+
+          # 5. ANDROIDMANIFEST.XML
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.CALL_PHONE" />
+              <uses-permission android:name="android.permission.READ_CONTACTS" />
+              <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+              <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+              <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+              <queries>
+                  <package android:name="com.whatsapp" />
+                  <package android:name="com.whatsapp.w4b" />
+                  <intent>
+                      <action android:name="android.speech.RecognitionService" />
+                  </intent>
+              </queries>
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@android:drawable/sym_def_app_icon"
+                  android:label="JarvisAutomation"
+                  android:theme="@android:style/Theme.DeviceDefault.Light"
+                  android:usesCleartextTraffic="false"
+                  tools:targetApi="34">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:label="JarvisAutomation"
+                      android:launchMode="singleTop">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+                  <service
+                      android:name=".BackgroundAutomationService"
+                      android:enabled="true"
+                      android:exported="false"
+                      android:foregroundServiceType="microphone|connectedDevice" />
+
+                  <service
+                      android:name=".WhatsAppNotificationListener"
+                      android:label="Jarvis WhatsApp Listener"
+                      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="android.service.notification.NotificationListenerService" />
+                      </intent-filter>
+                  </service>
+
+                  <receiver
+                      android:name=".BluetoothHeadsetReceiver"
+                      android:exported="true"
+                      android:enabled="true">
+                      <intent-filter>
+                          <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                          <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+                          <action android:name="android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED" />
+                          <action android:name="android.intent.action.BOOT_COMPLETED" />
+                      </intent-filter>
+                  </receiver>
+
+              </application>
+          </manifest>
+          EOF
+
+          # 6. VIPCONFIG.JAVA (UPDATED WITH YOUR NUMBERS)
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/VipConfig.java
+          package com.jarvis.automation;
+
+          import java.util.HashMap;
+          import java.util.HashSet;
+          import java.util.Map;
+          import java.util.Set;
+
+          public final class VipConfig {
+              private VipConfig() {}
+
+              public static final Map<String, String> VIP_CONTACTS = new HashMap<>();
+              static {
+                  VIP_CONTACTS.put("wife", "+919506989074");
+                  VIP_CONTACTS.put("mom", "+919076765442");
+                  VIP_CONTACTS.put("dad", "+919453878596");
+                  VIP_CONTACTS.put("boss", "+917355116859");
+                  VIP_CONTACTS.put("emergency", "+919956895154");
+              }
+
+              public static final Set<String> TRUSTED_BLUETOOTH_DEVICES = new HashSet<>();
+              static {
+                  TRUSTED_BLUETOOTH_DEVICES.add("AA:BB:CC:DD:EE:01");
+              }
+
+              public static volatile boolean TRUST_ANY_BLUETOOTH_DEVICE = true;
+              public static volatile boolean AUTO_REPLY_ENABLED = true;
+
+              public static final String AUTO_REPLY_MESSAGE =
+                      "I'm driving right now and will reply as soon as I can. "
+                    + "For emergencies, please call me directly. - Sent automatically by JarvisAutomation";
+
+              public static final long AUTO_REPLY_COOLDOWN_MS = 5 * 60 * 1000L;
+              public static final String VOICE_WAKE_ENABLED = "jarvis_voice_enabled";
+              public static final float SHAKE_THRESHOLD = 15.0f;
+              public static final long SHAKE_COOLDOWN_MS = 1200L;
+              public static final String NOTIFICATION_CHANNEL_ID = "jarvis_automation_channel";
+              public static final int FOREGROUND_NOTIFICATION_ID = 4201;
+          }
+          EOF
+
+          # 7. VOICECOMMANDMANAGER.JAVA
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/VoiceCommandManager.java
+          package com.jarvis.automation;
+
+          import android.Manifest;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.media.AudioManager;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
+          import android.speech.RecognitionListener;
+          import android.speech.RecognizerIntent;
+          import android.speech.SpeechRecognizer;
+          import android.util.Log;
+          import android.view.KeyEvent;
+          import androidx.core.app.ActivityCompat;
+
+          import java.util.ArrayList;
+          import java.util.Locale;
+          import java.util.Map;
+
+          public class VoiceCommandManager implements RecognitionListener {
+              private static final String TAG = "VoiceCommandManager";
+
+              public interface TorchCallback {
+                  void setTorch(boolean on);
+              }
+
+              private final Context context;
+              private final TorchCallback torchCallback;
+              private final Handler handler = new Handler(Looper.getMainLooper());
+              private SpeechRecognizer speechRecognizer;
+              private volatile boolean running = false;
+              private volatile boolean listening = false;
+
+              public VoiceCommandManager(Context context, TorchCallback torchCallback) {
+                  this.context = context.getApplicationContext();
+                  this.torchCallback = torchCallback;
+              }
+
+              public void start() {
+                  if (running) return;
+                  if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      return;
+                  }
+                  if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+                      return;
+                  }
+                  running = true;
+                  handler.post(this::initAndListen);
+              }
+
+              public void stop() {
+                  running = false;
+                  handler.post(() -> {
+                      if (speechRecognizer != null) {
+                          speechRecognizer.destroy();
+                          speechRecognizer = null;
+                      }
+                      listening = false;
+                  });
+              }
+
+              private void initAndListen() {
+                  if (!running) return;
+                  if (speechRecognizer == null) {
+                      speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
+                      speechRecognizer.setRecognitionListener(this);
+                  }
+                  Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                  intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                  intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                  intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+                  intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                  try {
+                      listening = true;
+                      speechRecognizer.startListening(intent);
+                  } catch (Exception e) {
+                      restartWithDelay(2000);
+                  }
+              }
+
+              private void restartWithDelay(long delayMs) {
+                  listening = false;
+                  if (!running) return;
+                  handler.postDelayed(this::initAndListen, delayMs);
+              }
+
+              @Override
+              public void onResults(Bundle results) {
+                  listening = false;
+                  ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                  if (matches != null) {
+                      for (String phrase : matches) {
+                          if (handleCommand(phrase.toLowerCase(Locale.getDefault()).trim())) {
+                              break;
+                          }
+                      }
+                  }
+                  restartWithDelay(400);
+              }
+
+              @Override
+              public void onError(int error) {
+                  listening = false;
+                  long delay = (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) ? 400 : 1500;
+                  restartWithDelay(delay);
+              }
+
+              private boolean handleCommand(String phrase) {
+                  if (phrase.contains("call ")) {
+                      String target = phrase.substring(phrase.indexOf("call ") + 5).trim();
+                      return placeVipCall(target);
+                  }
+                  if (phrase.contains("emergency")) {
+                      return placeVipCall("emergency");
+                  }
+                  if (phrase.contains("play music") || phrase.equals("play") || phrase.contains("resume music")) {
+                      dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY);
+                      return true;
+                  }
+                  if (phrase.contains("pause music") || phrase.equals("pause") || phrase.contains("stop music")) {
+                      dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE);
+                      return true;
+                  }
+                  if (phrase.contains("next track") || phrase.contains("next song") || phrase.contains("skip song")) {
+                      dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT);
+                      return true;
+                  }
+                  if (phrase.contains("previous track") || phrase.contains("previous song") || phrase.contains("last song")) {
+                      dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+                      return true;
+                  }
+                  if (phrase.contains("torch on") || phrase.contains("flashlight on") || phrase.contains("light on")) {
+                      if (torchCallback != null) torchCallback.setTorch(true);
+                      return true;
+                  }
+                  if (phrase.contains("torch off") || phrase.contains("flashlight off") || phrase.contains("light off")) {
+                      if (torchCallback != null) torchCallback.setTorch(false);
+                      return true;
+                  }
+                  return false;
+              }
+
+              private boolean placeVipCall(String spokenName) {
+                  String bestMatchNumber = null;
+                  for (Map.Entry<String, String> entry : VipConfig.VIP_CONTACTS.entrySet()) {
+                      if (spokenName.contains(entry.getKey())) {
+                          bestMatchNumber = entry.getValue();
+                          break;
+                      }
+                  }
+                  if (bestMatchNumber == null) return false;
+
+                  boolean hasCallPermission = ActivityCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE)
+                          == PackageManager.PERMISSION_GRANTED;
+
+                  Intent callIntent = new Intent(hasCallPermission ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+                  callIntent.setData(Uri.parse("tel:" + bestMatchNumber));
+                  callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  try {
+                      context.startActivity(callIntent);
+                  } catch (Exception e) {}
+                  return true;
+              }
+
+              private void dispatchMediaKey(int keyCode) {
+                  AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                  if (audioManager == null) return;
+                  long eventTime = android.os.SystemClock.uptimeMillis();
+                  KeyEvent down = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0);
+                  KeyEvent up = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0);
+                  audioManager.dispatchMediaKeyEvent(down);
+                  audioManager.dispatchMediaKeyEvent(up);
+              }
+
+              @Override public void onReadyForSpeech(Bundle params) { }
+              @Override public void onBeginningOfSpeech() { }
+              @Override public void onRmsChanged(float rmsdB) { }
+              @Override public void onBufferReceived(byte[] buffer) { }
+              @Override public void onEndOfSpeech() { }
+              @Override public void onPartialResults(Bundle partialResults) { }
+              @Override public void onEvent(int eventType, Bundle params) { }
+          }
+          EOF
+
+          # 8. BACKGROUNDAUTOMATIONSERVICE.JAVA
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/BackgroundAutomationService.java
+          package com.jarvis.automation;
+
+          import android.Manifest;
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.app.Service;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.hardware.Sensor;
+          import android.hardware.SensorEvent;
+          import android.hardware.SensorEventListener;
+          import android.hardware.SensorManager;
+          import android.hardware.camera2.CameraAccessException;
+          import android.hardware.camera2.CameraCharacteristics;
+          import android.hardware.camera2.CameraManager;
+          import android.os.Build;
+          import android.os.IBinder;
+          import android.os.PowerManager;
+          import android.util.Log;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.app.NotificationCompat;
+
+          public class BackgroundAutomationService extends Service
+                  implements SensorEventListener, VoiceCommandManager.TorchCallback {
+
+              private SensorManager sensorManager;
+              private Sensor accelerometer;
+              private long lastShakeTimestamp = 0L;
+              private CameraManager cameraManager;
+              private String flashCameraId;
+              private boolean torchOn = false;
+              private VoiceCommandManager voiceCommandManager;
+              private PowerManager.WakeLock wakeLock;
+
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  createNotificationChannel();
+                  setupSensors();
+                  setupCamera();
+                  acquireWakeLock();
+                  voiceCommandManager = new VoiceCommandManager(this, this);
+              }
+
+              @Override
+              public int onStartCommand(Intent intent, int flags, int startId) {
+                  startForegroundCompat();
+                  if (sensorManager != null && accelerometer != null) {
+                      sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+                  }
+                  if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                          == PackageManager.PERMISSION_GRANTED) {
+                      voiceCommandManager.start();
+                  }
+                  return START_STICKY;
+              }
+
+              private void startForegroundCompat() {
+                  Notification notification = buildNotification("Jarvis is active", "Listening for voice commands & shake gestures");
+                  int type = 0;
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                      type = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                              | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+                  }
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && type != 0) {
+                      startForeground(VipConfig.FOREGROUND_NOTIFICATION_ID, notification, type);
+                  } else {
+                      startForeground(VipConfig.FOREGROUND_NOTIFICATION_ID, notification);
+                  }
+              }
+
+              private Notification buildNotification(String title, String text) {
+                  Intent openIntent = new Intent(this, MainActivity.class);
+                  PendingIntent pendingIntent = PendingIntent.getActivity(
+                          this, 0, openIntent,
+                          PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                  return new NotificationCompat.Builder(this, VipConfig.NOTIFICATION_CHANNEL_ID)
+                          .setContentTitle(title)
+                          .setContentText(text)
+                          .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+                          .setOngoing(true)
+                          .setPriority(NotificationCompat.PRIORITY_LOW)
+                          .setContentIntent(pendingIntent)
+                          .build();
+              }
+
+              private void createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationManager manager = getSystemService(NotificationManager.class);
+                      if (manager != null && manager.getNotificationChannel(VipConfig.NOTIFICATION_CHANNEL_ID) == null) {
+                          NotificationChannel channel = new NotificationChannel(
+                                  VipConfig.NOTIFICATION_CHANNEL_ID,
+                                  "Jarvis Automation",
+                                  NotificationManager.IMPORTANCE_LOW);
+                          manager.createNotificationChannel(channel);
+                      }
+                  }
+              }
+
+              private void setupSensors() {
+                  sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+                  if (sensorManager != null) {
+                      accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                  }
+              }
+
+              private void setupCamera() {
+                  cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                  if (cameraManager == null) return;
+                  try {
+                      for (String id : cameraManager.getCameraIdList()) {
+                          Boolean hasFlash = cameraManager.getCameraCharacteristics(id)
+                                  .get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                          if (hasFlash != null && hasFlash) {
+                              flashCameraId = id;
+                              break;
+                          }
+                      }
+                  } catch (CameraAccessException e) {}
+              }
+
+              private void acquireWakeLock() {
+                  PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                  if (powerManager != null) {
+                      wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JarvisAutomation::BackgroundLock");
+                      wakeLock.setReferenceCounted(false);
+                      wakeLock.acquire(10 * 60 * 60 * 1000L);
+                  }
+              }
+
+              @Override
+              public void onSensorChanged(SensorEvent event) {
+                  if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+                  float x = event.values[0];
+                  float y = event.values[1];
+                  float z = event.values[2];
+                  double magnitude = Math.sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH;
+
+                  long now = System.currentTimeMillis();
+                  if (Math.abs(magnitude) > VipConfig.SHAKE_THRESHOLD && (now - lastShakeTimestamp) > VipConfig.SHAKE_COOLDOWN_MS) {
+                      lastShakeTimestamp = now;
+                      setTorch(!torchOn);
+                  }
+              }
+
+              @Override
+              public void setTorch(boolean on) {
+                  if (cameraManager == null || flashCameraId == null) return;
+                  try {
+                      cameraManager.setTorchMode(flashCameraId, on);
+                      torchOn = on;
+                  } catch (CameraAccessException e) {}
+              }
+
+              @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+              @Override public IBinder onBind(Intent intent) { return null; }
+
+              @Override
+              public void onDestroy() {
+                  if (sensorManager != null) sensorManager.unregisterListener(this);
+                  if (voiceCommandManager != null) voiceCommandManager.stop();
+                  if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+                  super.onDestroy();
+              }
+
+              public static void start(Context context) {
+                  Intent intent = new Intent(context, BackgroundAutomationService.class);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      context.startForegroundService(intent);
+                  } else {
+                      context.startService(intent);
+                  }
+              }
+          }
+          EOF
+
+          # 9. BLUETOOTHHEADSETRECEIVER.JAVA
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/BluetoothHeadsetReceiver.java
+          package com.jarvis.automation;
+
+          import android.Manifest;
+          import android.bluetooth.BluetoothDevice;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import androidx.core.app.ActivityCompat;
+
+          public class BluetoothHeadsetReceiver extends BroadcastReceiver {
+              @Override
+              public void onReceive(Context context, Intent intent) {
+                  String action = intent.getAction();
+                  if (action == null) return;
+
+                  if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+                      BackgroundAutomationService.start(context);
+                      return;
+                  }
+
+                  if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                      BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                      if (device == null) return;
+
+                      String address = null;
+                      try {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                              if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                  address = device.getAddress();
+                              }
+                          } else {
+                              address = device.getAddress();
+                          }
+                      } catch (SecurityException e) {}
+
+                      boolean trusted = VipConfig.TRUST_ANY_BLUETOOTH_DEVICE || (address != null && VipConfig.TRUSTED_BLUETOOTH_DEVICES.contains(address));
+                      if (trusted) {
+                          BackgroundAutomationService.start(context);
+                      }
+                  }
+              }
+          }
+          EOF
+
+          # 10. WHATSAPPNOTIFICATIONLISTENER.JAVA
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/WhatsAppNotificationListener.java
+          package com.jarvis.automation;
+
+          import android.app.Notification;
+          import android.app.PendingIntent;
+          import android.app.RemoteInput;
+          import android.content.Intent;
+          import android.os.Bundle;
+          import android.service.notification.NotificationListenerService;
+          import android.service.notification.StatusBarNotification;
+
+          import java.util.HashMap;
+          import java.util.Map;
+
+          public class WhatsAppNotificationListener extends NotificationListenerService {
+              private static final String PKG_WHATSAPP = "com.whatsapp";
+              private static final String PKG_WHATSAPP_BUSINESS = "com.whatsapp.w4b";
+              private final Map<String, Long> lastReplyTimestamps = new HashMap<>();
+
+              @Override
+              public void onNotificationPosted(StatusBarNotification sbn) {
+                  if (sbn == null || sbn.getNotification() == null) return;
+                  if (!VipConfig.AUTO_REPLY_ENABLED) return;
+
+                  String packageName = sbn.getPackageName();
+                  if (!PKG_WHATSAPP.equals(packageName) && !PKG_WHATSAPP_BUSINESS.equals(packageName)) return;
+
+                  Notification notification = sbn.getNotification();
+                  if ((notification.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
+
+                  Bundle extras = notification.extras;
+                  CharSequence senderTitle = extras != null ? extras.getCharSequence(Notification.EXTRA_TITLE) : null;
+                  String sender = senderTitle != null ? senderTitle.toString() : sbn.getKey();
+
+                  if ((System.currentTimeMillis() - lastReplyTimestamps.getOrDefault(sender, 0L)) < VipConfig.AUTO_REPLY_COOLDOWN_MS) return;
+
+                  Notification.Action replyAction = null;
+                  if (notification.actions != null) {
+                      for (Notification.Action action : notification.actions) {
+                          if (action.getRemoteInputs() != null && action.getRemoteInputs().length > 0) {
+                              replyAction = action;
+                              break;
+                          }
+                      }
+                  }
+                  if (replyAction == null) return;
+
+                  RemoteInput[] remoteInputs = replyAction.getRemoteInputs();
+                  Bundle resultsBundle = new Bundle();
+                  for (RemoteInput remoteInput : remoteInputs) {
+                      resultsBundle.putCharSequence(remoteInput.getResultKey(), VipConfig.AUTO_REPLY_MESSAGE);
+                  }
+
+                  Intent fillInIntent = new Intent();
+                  RemoteInput.addResultsToIntent(remoteInputs, fillInIntent, resultsBundle);
+
+                  try {
+                      replyAction.actionIntent.send(getApplicationContext(), 0, fillInIntent);
+                      lastReplyTimestamps.put(sender, System.currentTimeMillis());
+                  } catch (PendingIntent.CanceledException e) {}
+              }
+
+              @Override public void onNotificationRemoved(StatusBarNotification sbn) {}
+          }
+          EOF
+
+          # 11. MAINACTIVITY.JAVA
+          cat << 'EOF' > app/src/main/java/com/jarvis/automation/MainActivity.java
+          package com.jarvis.automation;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.PowerManager;
+          import android.provider.Settings;
+          import android.text.TextUtils;
+          import android.view.Gravity;
+          import android.widget.Button;
+          import android.widget.LinearLayout;
+          import android.widget.ScrollView;
+          import android.widget.TextView;
+          import android.widget.Toast;
+
+          import androidx.annotation.NonNull;
+          import androidx.annotation.Nullable;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+
+          import java.util.ArrayList;
+          import java.util.List;
+
+          public class MainActivity extends Activity {
+              private TextView statusText;
+
+              @Override
+              protected void onCreate(@Nullable Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  buildUi();
+                  refreshStatus();
+              }
+
+              private void buildUi() {
+                  ScrollView scrollView = new ScrollView(this);
+                  LinearLayout root = new LinearLayout(this);
+                  root.setOrientation(LinearLayout.VERTICAL);
+                  int pad = dp(24);
+                  root.setPadding(pad, pad, pad, pad);
+                  root.setGravity(Gravity.CENTER_HORIZONTAL);
+
+                  TextView title = new TextView(this);
+                  title.setText("JarvisAutomation");
+                  title.setTextSize(24f);
+                  title.setPadding(0, 0, 0, dp(16));
+                  root.addView(title);
+
+                  statusText = new TextView(this);
+                  statusText.setTextSize(14f);
+                  statusText.setPadding(0, 0, 0, dp(24));
+                  root.addView(statusText);
+
+                  Button grantPermissionsButton = new Button(this);
+                  grantPermissionsButton.setText("1. Grant Core Permissions");
+                  grantPermissionsButton.setOnClickListener(v -> requestCorePermissions());
+                  root.addView(grantPermissionsButton);
+
+                  Button notificationAccessButton = new Button(this);
+                  notificationAccessButton.setText("2. Enable WhatsApp Auto-Reply Access");
+                  notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+                  root.addView(notificationAccessButton);
+
+                  Button batteryButton = new Button(this);
+                  batteryButton.setText("3. Disable Battery Optimisation");
+                  batteryButton.setOnClickListener(v -> requestIgnoreBatteryOptimizations());
+                  root.addView(batteryButton);
+
+                  Button startButton = new Button(this);
+                  startButton.setText("4. Start Jarvis Background Service");
+                  startButton.setOnClickListener(v -> {
+                      BackgroundAutomationService.start(this);
+                      Toast.makeText(this, "Jarvis automation service started.", Toast.LENGTH_SHORT).show();
+                      refreshStatus();
+                  });
+                  root.addView(startButton);
+
+                  scrollView.addView(root);
+                  setContentView(scrollView);
+              }
+
+              private int dp(int value) {
+                  return Math.round(value * getResources().getDisplayMetrics().density);
+              }
+
+              private String[] buildRequiredPermissions() {
+                  List<String> permissions = new ArrayList<>();
+                  permissions.add(Manifest.permission.RECORD_AUDIO);
+                  permissions.add(Manifest.permission.CALL_PHONE);
+                  permissions.add(Manifest.permission.READ_CONTACTS);
+                  permissions.add(Manifest.permission.READ_PHONE_STATE);
+                  permissions.add(Manifest.permission.CAMERA);
+                  permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+                  permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                      permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
+                      permissions.add(Manifest.permission.BLUETOOTH_SCAN);
+                  }
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      permissions.add(Manifest.permission.POST_NOTIFICATIONS);
+                  }
+                  return permissions.toArray(new String[0]);
+              }
+
+              private void requestCorePermissions() {
+                  List<String> missing = new ArrayList<>();
+                  for (String permission : buildRequiredPermissions()) {
+                      if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                          missing.add(permission);
+                      }
+                  }
+                  if (missing.isEmpty()) {
+                      refreshStatus();
+                      return;
+                  }
+                  ActivityCompat.requestPermissions(this, missing.toArray(new String[0]), 9001);
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  refreshStatus();
+              }
+
+              private void requestIgnoreBatteryOptimizations() {
+                  PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                  String packageName = getPackageName();
+                  if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                      Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                      intent.setData(Uri.parse("package:" + packageName));
+                      try { startActivity(intent); } catch (Exception e) {}
+                  }
+              }
+
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  refreshStatus();
+              }
+
+              private void refreshStatus() {
+                  StringBuilder sb = new StringBuilder();
+                  boolean corePermissionsGranted = true;
+                  for (String permission : buildRequiredPermissions()) {
+                      if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                          corePermissionsGranted = false;
+                          break;
+                      }
+                  }
+                  String enabledListeners = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+                  boolean listenerEnabled = !TextUtils.isEmpty(enabledListeners) && enabledListeners.contains(getPackageName());
+
+                  sb.append("Core permissions: ").append(corePermissionsGranted ? "GRANTED" : "MISSING").append("\n");
+                  sb.append("WhatsApp listener access: ").append(listenerEnabled ? "ENABLED" : "DISABLED").append("\n");
+                  statusText.setText(sb.toString());
+              }
+          }
+          EOF
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JarvisAutomation-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
