@@ -81,7 +81,7 @@ jobs:
 
           # 3. GRADLE.PROPERTIES
           cat << 'EOF' > gradle.properties
-          Org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           org.gradle.parallel=true
           android.useAndroidX=true
           android.enableJetifier=false
@@ -225,7 +225,7 @@ jobs:
           </manifest>
           EOF
 
-          # 6. VIPCONFIG.JAVA (UPDATED WITH YOUR NUMBERS)
+          # 6. VIPCONFIG.JAVA
           cat << 'EOF' > app/src/main/java/com/jarvis/automation/VipConfig.java
           package com.jarvis.automation;
 
